@@ -40,8 +40,8 @@ Upstream reference clone (read-only, for diffing):
 | `npm run lint` (0 errors) / `npm test` (76/76 pass) | ✅ passes |
 | `npm run dist:linux` (AppImage 110MB + deb 76MB) | ✅ built |
 | Packaged app boots; renderer reaches `/auth` via CDP | ✅ verified |
-| `dist:mac` / `dist:win` (need their own OS) | ⬜ untested here |
-| Nothing committed or pushed to GitHub | ⬜ by design — ask user first |
+| `dist:mac` / `dist:win` (need their own OS) | ✅ built in CI |
+| Published to GitHub + v1.0.0 release, all 3 platforms | ✅ shipped |
 
 ## Key architecture facts (re-derived at cost, don't lose these)
 
@@ -133,13 +133,15 @@ notarization: users still clear quarantine once (`xattr -cr`), per the README.
 
 ## Next steps
 
-1. Run `npm run lint` and `npm test` to confirm the copied source is intact.
-2. Run `npm run dist:linux`, then launch the AppImage and smoke-test.
-3. Tell the user the one-time backend config (also in README "Desktop app"):
-   register `http://localhost:8080` in Supabase redirect URLs,
+1. **Outstanding user action:** the one-time backend config (also in README
+   "Desktop app"). Until it is done, platform connections fail in the desktop
+   app: register `http://localhost:8080` in Supabase redirect URLs,
    `http://localhost:8080/oauth/callback` in each platform OAuth app, and widen
    `video-cut-resolver`'s `ALLOW_ORIGIN`.
-4. Ask before creating/pushing any GitHub repo.
+2. Nobody has run the shipped installers on real macOS or Windows hardware yet —
+   only Linux was smoke-tested locally. Worth a manual pass.
+3. To cut a new version: bump `version` in package.json, then
+   `./scripts/publish-desktop.sh dlroqa/streamforge-desktop v1.0.1`.
 
 ## Known limitations to communicate
 
