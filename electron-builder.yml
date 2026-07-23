@@ -55,7 +55,11 @@ mac:
     NSMicrophoneUsageDescription: StreamForge needs your microphone to capture audio for your stream.
 
 dmg:
-  title: ${productName}
+  # The volume name must be unique per architecture. electron-builder builds the
+  # arm64 and x64 dmgs concurrently, and with a shared title both mount at
+  # /Volumes/StreamForge — so each one's `hdiutil detach` tears down the other's
+  # volume and the second dmg fails ("unable to execute hdiutil ... Exit code: 3").
+  title: ${productName} ${arch}
 
 win:
   icon: build/icon.png
