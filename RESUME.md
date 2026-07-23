@@ -103,38 +103,33 @@ npm run dist:mac         # .dmg + .zip (run on macOS)
 npm run dist:win         # NSIS .exe (run on Windows)
 ```
 
-## Publishing — BLOCKED on GitHub auth (do this first)
+## Published — v1.0.0 is live
 
-Everything is committed on branch `main` (commit `9cf4352`). Publishing is the
-only step left, and it is blocked: the `gh` token went **invalid mid-session**
-(`gh api user` → 401). There are no fallback credentials — no `GH_TOKEN`, no
-credential helper, no SSH key.
+Repo: **https://github.com/dlroqa/streamforge-desktop** (PRIVATE, default branch `main`)
+Release: **https://github.com/dlroqa/streamforge-desktop/releases/tag/v1.0.0** (published,
+not a draft) with installers for all three platforms — arm64 + Intel dmg/zip,
+Windows NSIS exe, Linux AppImage + deb.
 
-User-approved plan (confirmed 2026-07-23): **new repo `dlroqa/streamforge-desktop`,
-PRIVATE, plus a `v1.0.0` tag** so CI builds all three platforms and publishes a
-Release. Do **not** push into `livepost-main` — it is Lovable-synced and pushes
-there can collide with Lovable's auto-commits.
+Auth note: the original token died mid-session and was replaced. `gh` was then
+set to use **ssh** for git while no registered SSH key existed, so git protocol
+was switched to https + `gh auth setup-git`. If a future push fails with
+`Permission denied (publickey)`, that is why.
 
-```sh
-# 1. Re-authenticate. The `workflow` scope is required or the push will be
-#    rejected for containing .github/workflows/build-desktop.yml.
-gh auth login -h github.com -s repo,workflow
+### Two CI bugs fixed to get macOS building (do not regress these)
 
-# 2. Create the private repo and push.
-cd /home/agent/Repositories/StreamForge
-gh repo create dlroqa/streamforge-desktop --private --source=. --remote=origin --push
+1. **Never map absent signing secrets.** `CSC_LINK: ${{ secrets.CSC_LINK }}`
+   with no such secret expands to an empty string, and electron-builder reads
+   CSC_LINK as a *path to a certificate* — it opened the empty path and failed
+   with `<workspace> not a file`. The workflow now sets only
+   `CSC_IDENTITY_AUTO_DISCOVERY: false`.
+2. **arm64 + x64 dmgs need distinct volume names.** They build concurrently; a
+   shared `dmg.title` mounts both at `/Volumes/StreamForge`, so each one's
+   `hdiutil detach` destroys the other's volume. `title: ${productName} ${arch}`
+   separates them. Bug #1 masked this one by failing earlier.
 
-# 3. Tag to trigger the all-platform build + Release.
-git tag v1.0.0 && git push origin v1.0.0
-
-# 4. Watch it.
-gh run watch
-```
-
-The tag build is what produces the **macOS and Windows** installers — they
-cannot be built on this Linux box (Windows needs wine; macOS needs the
-darwin-only `dmg-license`). Both were attempted and failed for exactly those
-reasons. Linux artifacts already exist in `release/` (AppImage 110MB, deb 76MB).
+Unsigned macOS builds are **ad-hoc signed** by `electron/afterPack.cjs` — Apple
+Silicon will not launch an arm64 binary with no signature at all. That is not
+notarization: users still clear quarantine once (`xattr -cr`), per the README.
 
 ## Next steps
 
