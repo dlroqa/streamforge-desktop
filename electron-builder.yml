@@ -10,6 +10,10 @@ directories:
   output: release
   buildResources: build
 
+# Ad-hoc signs the macOS bundle (no-op on Windows/Linux) so unsigned arm64
+# builds are launchable. See electron/afterPack.cjs.
+afterPack: electron/afterPack.cjs
+
 # Ship the built web bundle + the compiled Electron layer. Everything the app
 # loads at runtime lives in dist/ (served locally) or electron-dist/ (esbuild
 # bundles the main process, with only `electron` left external).
@@ -35,7 +39,14 @@ mac:
       arch: [arm64, x64]
     - target: zip
       arch: [arm64, x64]
-  # Hardened runtime + entitlements so camera/mic/screen work once signed.
+  # No Apple Developer certificate: `identity: null` stops electron-builder from
+  # hunting for one (an absent cert previously failed the whole build). The
+  # afterPack hook then ad-hoc signs the bundle, which Apple Silicon requires in
+  # order to launch it at all. To ship a properly signed + notarized build, drop
+  # this line, add the CSC_*/APPLE_* secrets, and re-enable them in the workflow.
+  identity: null
+  # Only applied when signing with a real certificate; inert for ad-hoc builds,
+  # kept so notarization works the moment a certificate is added.
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist

@@ -42,10 +42,31 @@ npm run dist              # all targets the current OS can build
 
 Build each platform's installer **on that platform** (or in CI): macOS `.dmg`
 requires macOS; Windows `.exe` builds best on Windows. Linux artifacts build on
-Ubuntu 24+. Installers are **unsigned** by default — macOS Gatekeeper and Windows
-SmartScreen will warn until you add signing credentials (`CSC_LINK`/`CSC_KEY_PASSWORD`
-for macOS + `APPLE_ID`/`APPLE_APP_SPECIFIC_PASSWORD` for notarization; a code-signing
-cert for Windows). See the [electron-builder docs](https://www.electron.build/code-signing).
+Ubuntu 24+. The `Build desktop installers` GitHub Actions workflow does all
+three on native runners — push a `v*` tag and it attaches them to a Release.
+
+### Installing the unsigned macOS build
+
+Builds ship **unsigned** (no Apple Developer certificate). The app bundle is
+*ad-hoc* signed during packaging — required, or Apple Silicon refuses to launch
+an arm64 binary at all — but macOS still quarantines anything downloaded from
+the internet. On first run:
+
+- **Right-click** the app in Applications → **Open** → **Open** in the dialog, or
+- clear the quarantine flag:
+  ```sh
+  xattr -cr /Applications/StreamForge.app
+  ```
+
+Windows SmartScreen will likewise warn: **More info → Run anyway**.
+
+To ship properly signed and notarized builds, add the `CSC_LINK` (base64 `.p12`),
+`CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID`
+repository secrets, map them into the packaging step in
+[.github/workflows/build-desktop.yml](.github/workflows/build-desktop.yml), drop
+`CSC_IDENTITY_AUTO_DISCOVERY`, and remove `identity: null` from
+[electron-builder.yml](electron-builder.yml). See the
+[electron-builder docs](https://www.electron.build/code-signing).
 
 ### One-time backend configuration
 

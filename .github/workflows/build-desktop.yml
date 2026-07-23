@@ -53,15 +53,17 @@ jobs:
         run: npx electron-builder --${{ matrix.platform }} --publish ${{ startsWith(github.ref, 'refs/tags/') && 'always' || 'never' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Code signing: add these repo secrets to ship signed builds.
-          # macOS:   CSC_LINK (base64 .p12), CSC_KEY_PASSWORD,
-          #          APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID
-          # Windows: CSC_LINK / CSC_KEY_PASSWORD
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Builds are unsigned. Do NOT reintroduce `CSC_LINK: ${{ secrets.CSC_LINK }}`
+          # here while that secret is unset: an undefined secret expands to an
+          # empty string, and electron-builder reads CSC_LINK as a *path to a
+          # certificate*, so it tries to open the empty path and fails the build
+          # with "<workspace> not a file".
+          #
+          # To ship signed + notarized builds: add the CSC_LINK (base64 .p12),
+          # CSC_KEY_PASSWORD, APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD and
+          # APPLE_TEAM_ID secrets, map them here, drop CSC_IDENTITY_AUTO_DISCOVERY
+          # below, and remove `identity: null` from electron-builder.yml.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Upload installers
         uses: actions/upload-artifact@v4
