@@ -103,6 +103,39 @@ npm run dist:mac         # .dmg + .zip (run on macOS)
 npm run dist:win         # NSIS .exe (run on Windows)
 ```
 
+## Publishing — BLOCKED on GitHub auth (do this first)
+
+Everything is committed on branch `main` (commit `9cf4352`). Publishing is the
+only step left, and it is blocked: the `gh` token went **invalid mid-session**
+(`gh api user` → 401). There are no fallback credentials — no `GH_TOKEN`, no
+credential helper, no SSH key.
+
+User-approved plan (confirmed 2026-07-23): **new repo `dlroqa/streamforge-desktop`,
+PRIVATE, plus a `v1.0.0` tag** so CI builds all three platforms and publishes a
+Release. Do **not** push into `livepost-main` — it is Lovable-synced and pushes
+there can collide with Lovable's auto-commits.
+
+```sh
+# 1. Re-authenticate. The `workflow` scope is required or the push will be
+#    rejected for containing .github/workflows/build-desktop.yml.
+gh auth login -h github.com -s repo,workflow
+
+# 2. Create the private repo and push.
+cd /home/agent/Repositories/StreamForge
+gh repo create dlroqa/streamforge-desktop --private --source=. --remote=origin --push
+
+# 3. Tag to trigger the all-platform build + Release.
+git tag v1.0.0 && git push origin v1.0.0
+
+# 4. Watch it.
+gh run watch
+```
+
+The tag build is what produces the **macOS and Windows** installers — they
+cannot be built on this Linux box (Windows needs wine; macOS needs the
+darwin-only `dmg-license`). Both were attempted and failed for exactly those
+reasons. Linux artifacts already exist in `release/` (AppImage 110MB, deb 76MB).
+
 ## Next steps
 
 1. Run `npm run lint` and `npm test` to confirm the copied source is intact.
