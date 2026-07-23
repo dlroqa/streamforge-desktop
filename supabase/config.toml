@@ -1,0 +1,45 @@
+project_id = "uhrfardkdinwcxshlqlo"
+
+[functions.stream-manager]
+verify_jwt = false
+
+# Public: guests have no account and resolve their invite by opaque token.
+[functions.guest-access]
+verify_jwt = false
+
+# Manual Bearer check inside; returns sensitive stream keys to the signed-in user.
+[functions.platform-connect]
+verify_jwt = false
+
+[functions.manage-destinations]
+verify_jwt = false
+
+[functions.trigger-scheduled-streams]
+verify_jwt = false
+
+[functions.viewer-analytics]
+verify_jwt = false
+
+# Admin panel: own credential system (admin_accounts + x-admin-token sessions),
+# not Supabase auth — the JWT check is done manually inside.
+[functions.admin-api]
+verify_jwt = false
+
+# Manual Bearer check inside; exchanges Freesound OAuth codes for tokens.
+[functions.freesound-auth]
+verify_jwt = false
+
+# Manual Bearer check inside; exchanges/refreshes Google Drive OAuth tokens so
+# users can store their files in their own Drive.
+[functions.google-drive-auth]
+verify_jwt = false
+
+# "UPDATE SYSTEM": copies the admin account's shared settings onto all other
+# accounts. Caller JWT is verified manually and gated to the admin's email.
+[functions.sync-system]
+verify_jwt = false
+
+# Manual Bearer check inside; one-click Livepush OAuth — links the user's own
+# Livepush account and returns their per-stream RTMP ingest (Universal Output).
+[functions.livepush-connect]
+verify_jwt = false

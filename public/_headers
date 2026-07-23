@@ -1,0 +1,12 @@
+# Cloudflare static-asset headers.
+# The HTML entry must NEVER be cached, or the edge keeps serving an old
+# index.html that points at stale (deleted) JS chunk hashes — which breaks every
+# deploy until the cache expires. Hashed /assets/* files are content-addressed
+# and safe to cache forever.
+/
+  Cache-Control: no-store, must-revalidate
+/index.html
+  Cache-Control: no-store, must-revalidate
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

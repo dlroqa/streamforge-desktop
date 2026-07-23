@@ -1,0 +1,14 @@
+{
+  // Static-asset deployment for the StreamForge SPA.
+  // No Worker script needed — Vite builds to ./dist and Cloudflare serves it
+  // from the edge. `single-page-application` rewrites deep links (e.g. /auth)
+  // to index.html so client-side routing works.
+  "name": "livepost-main",
+  "compatibility_date": "2026-07-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  },
+  "workers_dev": true,
+  "preview_urls": true
+}

@@ -1,0 +1,45 @@
+# Render Blueprint for StreamForge's backend sidecars (Docker).
+# In Render: New + → Blueprint → pick this repo. Render reads this file and
+# creates the services. Edit ALLOW_ORIGIN to your app's URL before/after deploy.
+services:
+  # Motion Graphics renderer (headless Chrome + FFmpeg). The deployed app
+  # reaches it via VITE_HYPERFRAMES_ENDPOINT in .env.production.
+  - type: web
+    name: hyperframes-service
+    runtime: docker
+    rootDir: hyperframes-service    # build context = this subfolder
+    dockerfilePath: ./Dockerfile
+    # 'starter' (512MB) was verified to OOM on every render, even at draft
+    # quality + a 720p cap — headless Chrome alone needs ~256MB+. 'standard'
+    # (2GB) is the minimum that fits. Approve the plan change in the Render
+    # dashboard when the Blueprint syncs.
+    plan: standard
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # "*" so preview URLs / future custom domains work too — the endpoint is
+      # public either way (CORS only gates browsers, not curl).
+      - key: ALLOW_ORIGIN
+        value: "*"
+      # Keep renders lean on the 2GB instance; raise/remove once headroom is
+      # proven (RENDER_QUALITY draft|standard|high, MAX_RENDER_PIXELS 0 = off).
+      - key: RENDER_QUALITY
+        value: standard
+      - key: MAX_RENDER_PIXELS
+        value: "2073600"
+      # Set in the Render dashboard to enable AI mode (Claude-authored comps).
+      - key: ANTHROPIC_API_KEY
+        sync: false
+  - type: web
+    name: video-cut-resolver
+    runtime: docker
+    rootDir: video-cut-resolver      # build context = this subfolder
+    dockerfilePath: ./Dockerfile
+    plan: starter                    # 'free' works but spins down when idle
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ALLOW_ORIGIN
+        value: https://livepost-main.eddelaroca.workers.dev
+      - key: MAX_DURATION_SECONDS
+        value: "3600"

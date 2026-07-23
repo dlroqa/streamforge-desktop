@@ -1,0 +1,17 @@
+{
+  "name": "hyperframes-service",
+  "version": "1.0.0",
+  "description": "Motion graphics render service for StreamForge — turns a text prompt into a HyperFrames composition and renders it to transparent WebM (or MP4).",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
+    "hyperframes": "^0.7.55"
+  }
+}
