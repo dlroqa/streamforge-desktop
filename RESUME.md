@@ -41,7 +41,9 @@ Upstream reference clone (read-only, for diffing):
 | `npm run dist:linux` (AppImage 110MB + deb 76MB) | ✅ built |
 | Packaged app boots; renderer reaches `/auth` via CDP | ✅ verified |
 | `dist:mac` / `dist:win` (need their own OS) | ✅ built in CI |
-| Published to GitHub + v1.0.0 release, all 3 platforms | ✅ shipped |
+| Published to GitHub + v1.0.2 release, all 3 platforms | ✅ shipped |
+| Rounded app icon (`scripts/round-icon.py`) | ✅ shipped in v1.0.1 |
+| In-app "Check for Updates…" (`electron/updater.ts`) | ✅ shipped in v1.0.2 |
 
 ## Key architecture facts (re-derived at cost, don't lose these)
 
@@ -103,33 +105,51 @@ npm run dist:mac         # .dmg + .zip (run on macOS)
 npm run dist:win         # NSIS .exe (run on Windows)
 ```
 
-## Published — v1.0.0 is live
+## Published — v1.0.2 is live
 
-Repo: **https://github.com/dlroqa/streamforge-desktop** (PRIVATE, default branch `main`)
-Release: **https://github.com/dlroqa/streamforge-desktop/releases/tag/v1.0.0** (published,
-not a draft) with installers for all three platforms — arm64 + Intel dmg/zip,
-Windows NSIS exe, Linux AppImage + deb.
+- **Source (private):** https://github.com/dlroqa/streamforge-desktop — branch `main`
+- **Releases (PUBLIC, binaries only):** https://github.com/dlroqa/streamforge-releases
+- **Latest:** v1.0.2 — mac arm64/Intel dmg+zip, Windows exe, Linux AppImage+deb
 
-Auth note: the original token died mid-session and was replaced. `gh` was then
-set to use **ssh** for git while no registered SSH key existed, so git protocol
-was switched to https + `gh auth setup-git`. If a future push fails with
-`Permission denied (publickey)`, that is why.
+Two repos on purpose. The app repo is private, and a shipped app has no
+credentials — GitHub's releases API returns **404** for a private repo, so the
+in-app updater could never see a release there. The public repo hosts binaries
+only; `electron-builder.yml`'s `publish:` block points at it and bakes
+`app-update.yml` into the package.
 
-### Two CI bugs fixed to get macOS building (do not regress these)
+Cross-repo publishing needs the **`RELEASES_TOKEN`** secret on the private repo
+(a PAT with `contents: write` on streamforge-releases). The built-in
+`GITHUB_TOKEN` is scoped to its own repo and cannot write across repos — there
+is no way around this. Rotate with:
+`gh secret set RELEASES_TOKEN --repo dlroqa/streamforge-desktop`
+
+### Update feed — verified working
+Fetched unauthenticated, exactly as the shipped app does: `latest.yml`,
+`latest-mac.yml`, `latest-linux.yml` all return 200, and every file they
+reference downloads (200). Re-check with the block in this file's git history
+after any release.
+
+### Bugs fixed in CI — do not regress these
 
 1. **Never map absent signing secrets.** `CSC_LINK: ${{ secrets.CSC_LINK }}`
-   with no such secret expands to an empty string, and electron-builder reads
-   CSC_LINK as a *path to a certificate* — it opened the empty path and failed
-   with `<workspace> not a file`. The workflow now sets only
-   `CSC_IDENTITY_AUTO_DISCOVERY: false`.
+   with no such secret expands to an empty string; electron-builder reads
+   CSC_LINK as a *path to a certificate* and fails with `<workspace> not a file`.
+   Only `CSC_IDENTITY_AUTO_DISCOVERY: false` is set now.
 2. **arm64 + x64 dmgs need distinct volume names.** They build concurrently; a
    shared `dmg.title` mounts both at `/Volumes/StreamForge`, so each one's
-   `hdiutil detach` destroys the other's volume. `title: ${productName} ${arch}`
-   separates them. Bug #1 masked this one by failing earlier.
+   `hdiutil detach` destroys the other's volume. Fixed with `${arch}` in the title.
+3. **Windows runners default to PowerShell.** Any `run:` step using POSIX test
+   syntax needs `shell: bash` or it dies with a ParserError. This silently
+   shipped a v1.0.2 with no Windows exe *and no latest.yml*, i.e. no update feed
+   for Windows, while the run still looked half-successful.
 
-Unsigned macOS builds are **ad-hoc signed** by `electron/afterPack.cjs` — Apple
-Silicon will not launch an arm64 binary with no signature at all. That is not
-notarization: users still clear quarantine once (`xattr -cr`), per the README.
+### macOS signing
+Builds are **ad-hoc signed** by `electron/afterPack.cjs` — Apple Silicon refuses
+to launch an arm64 binary with no signature at all. That is not notarization:
+users clear quarantine once (`xattr -cr`). Consequently Squirrel **cannot
+self-install** on macOS, so `electron/updater.ts` falls back to opening the
+download page there. Windows and Linux update and restart normally. Adding real
+Apple credentials switches macOS to the automatic path with no code change.
 
 ## Next steps
 
@@ -140,8 +160,12 @@ notarization: users still clear quarantine once (`xattr -cr`), per the README.
    `video-cut-resolver`'s `ALLOW_ORIGIN`.
 2. Nobody has run the shipped installers on real macOS or Windows hardware yet —
    only Linux was smoke-tested locally. Worth a manual pass.
-3. To cut a new version: bump `version` in package.json, then
-   `./scripts/publish-desktop.sh dlroqa/streamforge-desktop v1.0.1`.
+3. To cut a new version: bump `version` in **both** package.json and
+   package-lock.json (CI uses `npm ci`, which fails if they disagree), commit,
+   then tag `vX.Y.Z` and push the tag.
+4. **The updater has never been exercised end-to-end.** CI proves the feed
+   resolves, not that the app consumes it. Install v1.0.2 by hand, then release
+   v1.0.3 and use Check for Updates… to confirm download/install/restart.
 
 ## Known limitations to communicate
 
