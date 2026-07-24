@@ -29,7 +29,13 @@ let interactive = false;
 function configure(): void {
   autoUpdater.autoDownload = false; // ask first, then download
   autoUpdater.autoInstallOnAppQuit = true;
-  autoUpdater.logger = null;
+  // Silent by default. Set SF_UPDATER_DEBUG=1 to trace the check/download to
+  // stdout — the only practical way to diagnose an updater problem on a user's
+  // machine, since every failure path here is deliberately quiet.
+  autoUpdater.logger = process.env.SF_UPDATER_DEBUG
+    ? // eslint-disable-next-line no-console
+      { info: console.log, warn: console.warn, error: console.error, debug: console.log }
+    : null;
 }
 
 /** Offer the manual route when we cannot install for them. */

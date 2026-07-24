@@ -81,6 +81,11 @@ binaries. This repo is private, and a shipped app carries no credentials —
 GitHub's releases API returns `404` for a private repo, so an app pointed at it
 could never see a release.
 
+> **Linux:** only the **AppImage** can update itself. electron-updater refuses
+> to run otherwise (`APPIMAGE env is not defined, current application is not an
+> AppImage`), so `.deb` installs must be upgraded through the `.deb` — the check
+> simply stays silent there. Install the AppImage if you want in-app updates.
+
 > **macOS:** self-installing updates need a real Apple Developer signature —
 > Squirrel verifies the signature before applying one. Our builds are only
 > ad-hoc signed, so macOS instead offers to open the download page so you can
