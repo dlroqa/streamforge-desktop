@@ -10,6 +10,17 @@ directories:
   output: release
   buildResources: build
 
+# Updates are served from a PUBLIC repo that holds only binaries. The source
+# repo is private, and a shipped app has no credentials — GitHub's releases API
+# returns 404 for a private repo, so the updater could never see a release
+# there. This block is also what bakes app-update.yml into the package, which
+# is how electron-updater knows where to look at runtime.
+publish:
+  provider: github
+  owner: dlroqa
+  repo: streamforge-releases
+  releaseType: release
+
 # Ad-hoc signs the macOS bundle (no-op on Windows/Linux) so unsigned arm64
 # builds are launchable. See electron/afterPack.cjs.
 afterPack: electron/afterPack.cjs

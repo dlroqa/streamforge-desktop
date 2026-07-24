@@ -68,6 +68,34 @@ repository secrets, map them into the packaging step in
 [electron-builder.yml](electron-builder.yml). See the
 [electron-builder docs](https://www.electron.build/code-signing).
 
+### Updates
+
+**StreamForge → Check for Updates…** (Help → Check for Updates… on Windows and
+Linux) checks the public
+[streamforge-releases](https://github.com/dlroqa/streamforge-releases) repo,
+offers to download a newer version, then restarts to install it. A quiet check
+also runs a few seconds after launch, which stays silent unless an update exists.
+
+Updates deliberately come from a **separate public repo** that holds only
+binaries. This repo is private, and a shipped app carries no credentials —
+GitHub's releases API returns `404` for a private repo, so an app pointed at it
+could never see a release.
+
+> **macOS:** self-installing updates need a real Apple Developer signature —
+> Squirrel verifies the signature before applying one. Our builds are only
+> ad-hoc signed, so macOS instead offers to open the download page so you can
+> install the `.dmg` yourself. Windows and Linux install and restart normally.
+> Adding signing credentials switches macOS to the automatic path with no code
+> change.
+
+Publishing a release requires a `RELEASES_TOKEN` secret on this repo — a PAT
+with `contents: write` on `streamforge-releases`. The built-in `GITHUB_TOKEN`
+is scoped to its own repo and cannot write to another one:
+
+```sh
+gh secret set RELEASES_TOKEN --repo dlroqa/streamforge-desktop
+```
+
 ### One-time backend configuration
 
 Because the desktop app's origin is `http://localhost:8080` (rather than the
@@ -101,6 +129,7 @@ all of these:
 | [`electron/preload.ts`](electron/preload.ts) | Minimal `contextBridge` (app version + screen-share picker channel) |
 | [`electron/staticServer.ts`](electron/staticServer.ts) | Serves `dist/` on `http://localhost:8080` with SPA fallback |
 | [`electron/picker.html`](electron/picker.html) | Native screen/window chooser for `getDisplayMedia` |
+| [`electron/updater.ts`](electron/updater.ts) | Check/download/install updates from the public releases repo |
 | [`electron/build.mjs`](electron/build.mjs) | esbuild bundler → `electron-dist/` |
 | [`scripts/round-icon.py`](scripts/round-icon.py) | Regenerates `build/icon.png` with rounded corners from the source artwork |
 | [`electron-builder.yml`](electron-builder.yml) | Packaging targets for mac/win/linux |

@@ -41,6 +41,18 @@ jobs:
           node-version: 20
           cache: npm
 
+      # Fail fast with a readable message instead of letting electron-builder
+      # die halfway through a tag build with a 404 from the releases repo.
+      - name: Check publish credentials
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          if [ -z "${{ secrets.RELEASES_TOKEN }}" ]; then
+            echo "::error::RELEASES_TOKEN secret is not set. Create a PAT with" \
+                 "'contents: write' on dlroqa/streamforge-releases and add it:" \
+                 "gh secret set RELEASES_TOKEN --repo dlroqa/streamforge-desktop"
+            exit 1
+          fi
+
       - name: Install dependencies
         run: npm ci
 
@@ -52,7 +64,12 @@ jobs:
       - name: Package ${{ matrix.artifact }}
         run: npx electron-builder --${{ matrix.platform }} --publish ${{ startsWith(github.ref, 'refs/tags/') && 'always' || 'never' }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Publishes to the PUBLIC dlroqa/streamforge-releases repo (target set
+          # in electron-builder.yml), so the shipped updater can read releases
+          # without credentials. The built-in GITHUB_TOKEN is scoped to THIS
+          # repo only and cannot write to another one, so a PAT with
+          # `contents: write` on streamforge-releases is required.
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
           # Builds are unsigned. Do NOT reintroduce `CSC_LINK: ${{ secrets.CSC_LINK }}`
           # here while that secret is unset: an undefined secret expands to an
           # empty string, and electron-builder reads CSC_LINK as a *path to a

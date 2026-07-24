@@ -19,6 +19,7 @@ import {
 } from "electron";
 import path from "node:path";
 import { startStaticServer, type StaticServer } from "./staticServer";
+import { checkForUpdates, initUpdater, RELEASES_PAGE } from "./updater";
 
 const isDev = process.env.ELECTRON_DEV === "1";
 const DEV_URL = "http://localhost:8080";
@@ -208,10 +209,34 @@ function getLinuxIcon(): Electron.NativeImage | undefined {
 
 function buildMenu(): void {
   const isMac = process.platform === "darwin";
+
+  // "Check for Updates…" belongs directly under About on macOS, which means
+  // spelling out the app menu instead of using role: "appMenu".
+  const checkForUpdatesItem: Electron.MenuItemConstructorOptions = {
+    id: "check-for-updates",
+    label: "Check for Updates…",
+    click: () => void checkForUpdates(true),
+  };
+
+  const appMenu: Electron.MenuItemConstructorOptions = {
+    label: app.name,
+    submenu: [
+      { role: "about" },
+      { type: "separator" },
+      checkForUpdatesItem,
+      { type: "separator" },
+      { role: "services" },
+      { type: "separator" },
+      { role: "hide" },
+      { role: "hideOthers" },
+      { role: "unhide" },
+      { type: "separator" },
+      { role: "quit" },
+    ],
+  };
+
   const template: Electron.MenuItemConstructorOptions[] = [
-    ...(isMac
-      ? [{ role: "appMenu" as const }]
-      : []),
+    ...(isMac ? [appMenu] : []),
     { role: "fileMenu" },
     { role: "editMenu" },
     {
@@ -229,6 +254,18 @@ function buildMenu(): void {
       ],
     },
     { role: "windowMenu" },
+    {
+      role: "help",
+      submenu: [
+        // Windows/Linux have no app menu, so this is the only route to the
+        // updater there; harmless duplication on macOS.
+        ...(isMac ? [] : [checkForUpdatesItem, { type: "separator" as const }]),
+        {
+          label: "Releases",
+          click: () => void shell.openExternal(RELEASES_PAGE),
+        },
+      ],
+    },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
@@ -254,6 +291,7 @@ if (!app.requestSingleInstanceLock()) {
     }
     configurePermissions();
     buildMenu();
+    initUpdater();
 
     ipcMain.handle("app:getVersion", () => app.getVersion());
 
