@@ -2,7 +2,7 @@
   "name": "streamforge-desktop",
   "productName": "StreamForge",
   "private": true,
-  "version": "1.0.3",
+  "version": "1.0.4",
   "type": "module",
   "description": "StreamForge — live streaming studio desktop app (macOS, Windows, Linux).",
   "author": {

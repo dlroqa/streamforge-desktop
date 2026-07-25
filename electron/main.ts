@@ -179,8 +179,9 @@ function configureWindowOpen(wc: Electron.WebContents): void {
 let splashWindow: BrowserWindow | null = null;
 let splashShownAt = 0;
 let revealed = false;
-// Keep the splash up at least this long so a fast machine doesn't flash it.
-const MIN_SPLASH_MS = 2000;
+// Minimum time the splash stays up (the real hold is max(this, load time), so a
+// slow cold start still stays covered). Set to 10s per product preference.
+const MIN_SPLASH_MS = 10000;
 
 // Opt-in lifecycle tracing (mirrors SF_UPDATER_DEBUG). Set SF_SPLASH_DEBUG=1.
 const splashLog = (msg: string): void => {
