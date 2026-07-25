@@ -146,10 +146,19 @@ after any release.
 ### macOS signing
 Builds are **ad-hoc signed** by `electron/afterPack.cjs` — Apple Silicon refuses
 to launch an arm64 binary with no signature at all. That is not notarization:
-users clear quarantine once (`xattr -cr`). Consequently Squirrel **cannot
-self-install** on macOS, so `electron/updater.ts` falls back to opening the
-download page there. Windows and Linux update and restart normally. Adding real
-Apple credentials switches macOS to the automatic path with no code change.
+users clear quarantine once (`xattr -cr`) on first install.
+
+Squirrel.Mac cannot apply an update to such a build — it verifies the new bundle
+against the running app's designated requirement, which for an ad-hoc signature
+is `cdhash H"…"`, a hash of the build itself. So `electron/macUpdater.ts` does
+the install instead: download the arch-matched `.zip`, check its sha512 against
+`latest-mac.yml`, `ditto -x -k` into a staging dir, then a detached script waits
+for the app to exit, swaps the bundle (moving the old one aside so a failed copy
+rolls back) and reopens it. No certificate involved anywhere.
+
+Windows (silent NSIS) and Linux (AppImage self-swap, or `.deb` via
+electron-updater's DebUpdater behind one polkit prompt) install and restart
+through electron-updater as normal — also unsigned.
 
 ## Next steps
 
@@ -164,8 +173,12 @@ Apple credentials switches macOS to the automatic path with no code change.
    package-lock.json (CI uses `npm ci`, which fails if they disagree), commit,
    then tag `vX.Y.Z` and push the tag.
 4. **The updater has never been exercised end-to-end.** CI proves the feed
-   resolves, not that the app consumes it. Install v1.0.2 by hand, then release
-   v1.0.3 and use Check for Updates… to confirm download/install/restart.
+   resolves, not that the app consumes it. Install the current version by hand
+   on each OS, release the next one, then use Check for Updates… to confirm
+   download/install/restart. Worth checking per platform, since all three now
+   take different install paths (see "macOS signing" above). On macOS the swap
+   script logs to `~/Library/Logs/StreamForge/update.log`; elsewhere run with
+   `SF_UPDATER_DEBUG=1`.
 
 ## Known limitations to communicate
 

@@ -81,17 +81,25 @@ binaries. This repo is private, and a shipped app carries no credentials —
 GitHub's releases API returns `404` for a private repo, so an app pointed at it
 could never see a release.
 
-> **Linux:** only the **AppImage** can update itself. electron-updater refuses
-> to run otherwise (`APPIMAGE env is not defined, current application is not an
-> AppImage`), so `.deb` installs must be upgraded through the `.deb` — the check
-> simply stays silent there. Install the AppImage if you want in-app updates.
+All three platforms install and restart in-app, with **no code-signing
+certificate on any of them**. How each one gets there differs:
 
-> **macOS:** self-installing updates need a real Apple Developer signature —
-> Squirrel verifies the signature before applying one. Our builds are only
-> ad-hoc signed, so macOS instead offers to open the download page so you can
-> install the `.dmg` yourself. Windows and Linux install and restart normally.
-> Adding signing credentials switches macOS to the automatic path with no code
-> change.
+- **Windows** — electron-updater runs the NSIS installer silently into the
+  existing location and relaunches.
+- **Linux** — the **AppImage** swaps its own file. The **`.deb`** installs
+  through `apt`/`dpkg` behind a single polkit password prompt, which it needs
+  because the app lives under `/opt`. Both artifacts are listed in
+  `latest-linux.yml`, so each install format updates from its own.
+- **macOS** — Squirrel.Mac refuses to apply an update to an ad-hoc signed
+  build: it checks the new bundle against the running app's *designated
+  requirement*, which for an ad-hoc signature is a hash of the build itself and
+  so can never match. StreamForge therefore skips Squirrel and installs the
+  update itself — download the architecture-matched `.zip`, verify its sha512
+  against `latest-mac.yml`, unpack with `ditto`, then swap the bundle and
+  relaunch from a detached script. See
+  [electron/macUpdater.ts](electron/macUpdater.ts). If the app can't write to
+  its own bundle — running straight off the `.dmg`, or installed by another
+  user — it falls back to opening the releases page.
 
 Publishing a release requires a `RELEASES_TOKEN` secret on this repo — a PAT
 with `contents: write` on `streamforge-releases`. The built-in `GITHUB_TOKEN`

@@ -180,8 +180,9 @@ let splashWindow: BrowserWindow | null = null;
 let splashShownAt = 0;
 let revealed = false;
 // Minimum time the splash stays up (the real hold is max(this, load time), so a
-// slow cold start still stays covered). Set to 10s per product preference.
-const MIN_SPLASH_MS = 10000;
+// slow cold start still stays covered). Platform-independent — 6s on macOS,
+// Windows and Linux alike.
+const MIN_SPLASH_MS = 6000;
 
 // Opt-in lifecycle tracing (mirrors SF_UPDATER_DEBUG). Set SF_SPLASH_DEBUG=1.
 const splashLog = (msg: string): void => {

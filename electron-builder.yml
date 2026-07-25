@@ -93,6 +93,16 @@ linux:
     StreamForge is a live streaming studio: multistream to YouTube, Twitch,
     Facebook and custom RTMP with guests, overlays, unified chat, an in-app
     video editor and an on-device teleprompter.
+  # Both formats self-update: the AppImage swaps its own file, and the deb goes
+  # through electron-updater's DebUpdater (one polkit prompt, since /opt needs
+  # root). electron-builder lists both in latest-linux.yml so each install finds
+  # its own artifact.
+  #
+  # Keep AppImage FIRST. The deb target writes a `package-type` marker into the
+  # shared linux-unpacked/resources/, and that is what electron-updater reads to
+  # decide which installer to use — build the deb first and the marker gets baked
+  # into the AppImage too. electron/updater.ts pins the AppImage case defensively,
+  # but this ordering is the actual fix.
   target:
     - target: AppImage
       arch: [x64]
