@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; img-src data:;"
+    />
+    <title>StreamForge</title>
+    <style>
+      /* Brand tokens mirrored from the login screen (src/index.css) so the
+         handoff into /auth is seamless. */
+      :root {
+        --bg: #0d0f17;
+        --accent: #06b4e0; /* hsl(192 95% 45%) — the sky-blue primary */
+        --accent-ink: #0d0f17; /* glyph colour on the tile (dark-on-blue) */
+        --text: #e6eaf0;
+        --muted: #6e7c92;
+        --border: rgba(6, 180, 224, 0.14);
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        background: transparent; /* window is transparent → rounded card shows */
+        overflow: hidden;
+        /* System stack: instant, no font fetch, native feel. The login's Inter
+           takes over the moment the main window reveals. */
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+          Roboto, "Helvetica Neue", Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        user-select: none;
+        cursor: default;
+      }
+      .card {
+        position: absolute;
+        inset: 10px; /* leaves room for the drop shadow */
+        background: radial-gradient(
+            120% 120% at 50% 30%,
+            #12151f 0%,
+            var(--bg) 60%
+          );
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55),
+          inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        /* Card enters, then the whole thing is faded out at the window level
+           (BrowserWindow.setOpacity) during handoff. */
+        animation: card-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+
+      /* ── Logo: broadcast rings behind a blue rounded-square tile ───────── */
+      .stage {
+        position: relative;
+        width: 168px;
+        height: 168px;
+        display: grid;
+        place-items: center;
+      }
+      .ring {
+        position: absolute;
+        width: 68px;
+        height: 68px;
+        border: 2px solid var(--accent);
+        border-radius: 50%;
+        opacity: 0;
+        transform: scale(0.7);
+        /* Pulsing broadcast waves = "going live". transform+opacity only. */
+        animation: pulse 2400ms cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+      }
+      .ring:nth-child(2) {
+        animation-delay: 800ms;
+      }
+      .ring:nth-child(3) {
+        animation-delay: 1600ms;
+      }
+      .tile {
+        position: relative;
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        background: var(--accent);
+        display: grid;
+        place-items: center;
+        box-shadow: 0 0 0 1px rgba(6, 180, 224, 0.4),
+          0 10px 30px rgba(6, 180, 224, 0.28);
+        animation: tile-in 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      }
+      .tile svg {
+        width: 32px;
+        height: 32px;
+        stroke: var(--accent-ink);
+        stroke-width: 2;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      /* ── Wordmark + subtitle ───────────────────────────────────────────── */
+      .wordmark {
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--text);
+        opacity: 0;
+        animation: rise 560ms ease-out 240ms both;
+      }
+      .subtitle {
+        margin-top: -8px;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        color: var(--muted);
+        opacity: 0;
+        animation: rise 560ms ease-out 400ms both;
+      }
+
+      /* ── Thin "starting up" shimmer ────────────────────────────────────── */
+      .loader {
+        width: 132px;
+        height: 3px;
+        border-radius: 3px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.06);
+        opacity: 0;
+        animation: fade-in 500ms ease-out 620ms both;
+      }
+      .loader::before {
+        content: "";
+        display: block;
+        width: 40%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--accent),
+          transparent
+        );
+        animation: sweep 1400ms ease-in-out 720ms infinite;
+      }
+
+      @keyframes card-in {
+        from {
+          opacity: 0;
+          transform: scale(0.965);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      @keyframes tile-in {
+        from {
+          opacity: 0;
+          transform: scale(0.7);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      @keyframes pulse {
+        0% {
+          opacity: 0.55;
+          transform: scale(0.7);
+        }
+        80% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 0;
+          transform: scale(2.6);
+        }
+      }
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes fade-in {
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes sweep {
+        0% {
+          transform: translateX(-120%);
+        }
+        100% {
+          transform: translateX(430%);
+        }
+      }
+
+      /* Accessibility: honour reduced-motion — no pulse/sweep/spring, just a
+         calm static logo that still fades in. */
+      @media (prefers-reduced-motion: reduce) {
+        .ring,
+        .loader::before {
+          animation: none;
+        }
+        .ring {
+          display: none;
+        }
+        .card,
+        .tile,
+        .wordmark,
+        .subtitle,
+        .loader {
+          animation: fade-in 300ms ease-out both;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="stage">
+        <span class="ring"></span>
+        <span class="ring"></span>
+        <span class="ring"></span>
+        <div class="tile">
+          <!-- lucide "radio" glyph, matching the login logo exactly -->
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4.93 19.07a10 10 0 0 1 0-14.14" />
+            <path d="M7.76 16.24a6 6 0 0 1 0-8.49" />
+            <path d="M16.24 7.76a6 6 0 0 1 0 8.49" />
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+            <circle cx="12" cy="12" r="2" />
+          </svg>
+        </div>
+      </div>
+      <div class="wordmark">StreamForge</div>
+      <div class="subtitle">Live Streaming Studio</div>
+      <div class="loader"></div>
+    </div>
+  </body>
+</html>

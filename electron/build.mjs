@@ -28,6 +28,7 @@ await build({
 });
 
 await copyFile(path.join(dir, "picker.html"), path.join(outdir, "picker.html"));
+await copyFile(path.join(dir, "splash.html"), path.join(outdir, "splash.html"));
 
 // The root package.json is `"type": "module"`, which would make Node treat the
 // bundled *.js here as ESM and reject their CommonJS `require`. This marker

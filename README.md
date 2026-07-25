@@ -134,6 +134,7 @@ all of these:
 | [`electron/preload.ts`](electron/preload.ts) | Minimal `contextBridge` (app version + screen-share picker channel) |
 | [`electron/staticServer.ts`](electron/staticServer.ts) | Serves `dist/` on `http://localhost:8080` with SPA fallback |
 | [`electron/picker.html`](electron/picker.html) | Native screen/window chooser for `getDisplayMedia` |
+| [`electron/splash.html`](electron/splash.html) | Animated startup splash (broadcast pulse), shown on cold launch |
 | [`electron/updater.ts`](electron/updater.ts) | Check/download/install updates from the public releases repo |
 | [`electron/build.mjs`](electron/build.mjs) | esbuild bundler → `electron-dist/` |
 | [`scripts/round-icon.py`](scripts/round-icon.py) | Regenerates `build/icon.png` with rounded corners from the source artwork |

@@ -172,6 +172,94 @@ function configureWindowOpen(wc: Electron.WebContents): void {
   });
 }
 
+// ── Startup splash ───────────────────────────────────────────────────────
+// A frameless, transparent window shown instantly at launch (before the static
+// server even boots) so the cold-start wait feels intentional. It bridges the
+// whole load and crossfades into the login. See electron/splash.html.
+let splashWindow: BrowserWindow | null = null;
+let splashShownAt = 0;
+let revealed = false;
+// Keep the splash up at least this long so a fast machine doesn't flash it.
+const MIN_SPLASH_MS = 2000;
+
+// Opt-in lifecycle tracing (mirrors SF_UPDATER_DEBUG). Set SF_SPLASH_DEBUG=1.
+const splashLog = (msg: string): void => {
+  if (process.env.SF_SPLASH_DEBUG)
+    // eslint-disable-next-line no-console
+    console.log(`[splash] +${Date.now() - (splashShownAt || Date.now())}ms ${msg}`);
+};
+
+function createSplash(): void {
+  splashWindow = new BrowserWindow({
+    width: 460,
+    height: 340,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    frame: false,
+    transparent: true,
+    backgroundColor: "#00000000",
+    hasShadow: true,
+    center: true,
+    alwaysOnTop: true,
+    show: false,
+    // No preload/Node — the splash is inert HTML/CSS.
+    webPreferences: { contextIsolation: true, nodeIntegration: false },
+  });
+  splashWindow.loadFile(path.join(__dirname, "splash.html"));
+  splashWindow.webContents.on("did-fail-load", (_e, code, desc) =>
+    splashLog(`did-fail-load ${code} ${desc}`),
+  );
+  splashWindow.once("ready-to-show", () => {
+    splashShownAt = Date.now();
+    splashLog("shown");
+    splashWindow?.show();
+  });
+  splashWindow.on("closed", () => {
+    splashWindow = null;
+    splashLog("closed");
+  });
+}
+
+/** Show the main window once loaded, holding + crossfading the splash. */
+function revealMainWindow(): void {
+  if (revealed || !mainWindow) return;
+  revealed = true;
+
+  const elapsed = splashShownAt ? Date.now() - splashShownAt : MIN_SPLASH_MS;
+  const wait = Math.max(0, MIN_SPLASH_MS - elapsed);
+  splashLog(`main ready; holding ${wait}ms more`);
+
+  setTimeout(() => {
+    if (!mainWindow) return;
+    mainWindow.show();
+    splashLog("main shown, fading splash");
+    fadeOutSplash();
+  }, wait);
+}
+
+/** Window-level opacity crossfade, then destroy — no IPC/preload needed. */
+function fadeOutSplash(): void {
+  const splash = splashWindow;
+  if (!splash || splash.isDestroyed()) return;
+
+  let opacity = 1;
+  const step = () => {
+    if (splash.isDestroyed()) return;
+    opacity -= 0.08;
+    if (opacity <= 0) {
+      splash.close();
+      return;
+    }
+    splash.setOpacity(opacity);
+    setTimeout(step, 16); // ~450ms total
+  };
+  step();
+}
+
 async function createWindow(): Promise<void> {
   mainWindow = new BrowserWindow({
     width: 1440,
@@ -192,7 +280,8 @@ async function createWindow(): Promise<void> {
   });
 
   configureWindowOpen(mainWindow.webContents);
-  mainWindow.once("ready-to-show", () => mainWindow?.show());
+  // Reveal is deferred so the splash can bridge the whole load with no flash.
+  mainWindow.once("ready-to-show", () => revealMainWindow());
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
@@ -282,6 +371,10 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(async () => {
+    // Splash first, before the (awaited) static-server boot, so it appears
+    // immediately and covers the slowest part of startup.
+    createSplash();
+
     if (!isDev) {
       staticServer = await startStaticServer(
         path.join(__dirname, "..", "dist"),
