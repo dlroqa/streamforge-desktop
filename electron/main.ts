@@ -231,8 +231,19 @@ function revealMainWindow(): void {
   if (revealed || !mainWindow) return;
   revealed = true;
 
-  const elapsed = splashShownAt ? Date.now() - splashShownAt : MIN_SPLASH_MS;
-  const wait = Math.max(0, MIN_SPLASH_MS - elapsed);
+  // No splash at all (creation failed, or the macOS re-activate path): reveal now.
+  if (!splashWindow) {
+    mainWindow.show();
+    return;
+  }
+
+  // The login is served from localhost and can become ready before the splash
+  // has even fired its own 'shown' event. When that happens splashShownAt is
+  // still 0, so measure the hold from now — otherwise the splash would be
+  // skipped entirely. (Earlier this used MIN_SPLASH_MS as the fallback elapsed,
+  // which collapsed the wait to 0 and flashed the splash by.)
+  const base = splashShownAt || Date.now();
+  const wait = Math.max(0, MIN_SPLASH_MS - (Date.now() - base));
   splashLog(`main ready; holding ${wait}ms more`);
 
   setTimeout(() => {
